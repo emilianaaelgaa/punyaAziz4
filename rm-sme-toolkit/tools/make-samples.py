@@ -250,6 +250,105 @@ def nib_image(path):
     img.save(path)
 
 
+# ------------------------------------------------------------------ Laporan keuangan fiktif
+LK = [  # (label, 2025, 2024, gaya)  gaya: h=judul bagian, b=tebal, n=normal, neg=tampil dalam kurung
+    ("ASET", None, None, "h"), ("Aset lancar", None, None, "h"),
+    ("Kas dan setara kas", 420_000_000, 310_000_000, "n"), ("Piutang usaha", 780_000_000, 690_000_000, "n"),
+    ("Persediaan", 950_000_000, 860_000_000, "n"), ("Uang muka dan biaya dibayar dimuka", 60_000_000, 45_000_000, "n"),
+    ("Jumlah aset lancar", 2_210_000_000, 1_905_000_000, "b"), ("Aset tidak lancar", None, None, "h"),
+    ("Aset tetap - bersih", 1_640_000_000, 1_580_000_000, "n"), ("Jumlah aset tidak lancar", 1_640_000_000, 1_580_000_000, "b"),
+    ("JUMLAH ASET", 3_850_000_000, 3_485_000_000, "b"),
+    ("LIABILITAS DAN EKUITAS", None, None, "h"), ("Liabilitas jangka pendek", None, None, "h"),
+    ("Utang usaha", 510_000_000, 470_000_000, "n"), ("Utang bank jangka pendek", 600_000_000, 650_000_000, "n"),
+    ("Bagian lancar utang bank jangka panjang", 120_000_000, 120_000_000, "n"), ("Utang pajak", 40_000_000, 35_000_000, "n"),
+    ("Beban masih harus dibayar", 30_000_000, 25_000_000, "n"), ("Jumlah liabilitas jangka pendek", 1_300_000_000, 1_300_000_000, "b"),
+    ("Utang bank jangka panjang", 360_000_000, 480_000_000, "n"), ("Jumlah liabilitas jangka panjang", 360_000_000, 480_000_000, "b"),
+    ("JUMLAH LIABILITAS", 1_660_000_000, 1_780_000_000, "b"), ("Ekuitas", None, None, "h"),
+    ("Modal disetor", 1_000_000_000, 1_000_000_000, "n"), ("Saldo laba", 1_190_000_000, 705_000_000, "n"),
+    ("JUMLAH EKUITAS", 2_190_000_000, 1_705_000_000, "b"), ("JUMLAH LIABILITAS DAN EKUITAS", 3_850_000_000, 3_485_000_000, "b"),
+    ("#PAGE", None, None, ""),
+    ("Penjualan bersih", 6_250_000_000, 5_400_000_000, "n"), ("Harga pokok penjualan", -4_700_000_000, -4_100_000_000, "n"),
+    ("Laba kotor", 1_550_000_000, 1_300_000_000, "b"), ("Beban penjualan", -320_000_000, -290_000_000, "n"),
+    ("Beban umum dan administrasi", -410_000_000, -380_000_000, "n"), ("Jumlah beban usaha", -730_000_000, -670_000_000, "b"),
+    ("Laba usaha", 820_000_000, 630_000_000, "b"), ("Pendapatan lain-lain", 15_000_000, 10_000_000, "n"),
+    ("Beban bunga", -180_000_000, -165_000_000, "n"), ("Laba sebelum pajak penghasilan", 655_000_000, 475_000_000, "b"),
+    ("Beban pajak penghasilan", -144_100_000, -104_500_000, "n"), ("Laba bersih tahun berjalan", 510_900_000, 370_500_000, "b"),
+    ("Informasi tambahan:", None, None, "h"), ("Beban penyusutan (termasuk dalam beban umum dan administrasi)", 95_000_000, 88_000_000, "n"),
+]
+LK_EXPECT = {"penjualan": [5_400_000_000, 6_250_000_000], "hpp": [4_100_000_000, 4_700_000_000], "biaya_operasional": [670_000_000, 730_000_000],
+             "laba_usaha": [630_000_000, 820_000_000], "biaya_bunga": [165_000_000, 180_000_000], "penyusutan": [88_000_000, 95_000_000],
+             "pajak": [104_500_000, 144_100_000], "laba_bersih": [370_500_000, 510_900_000], "kas": [310_000_000, 420_000_000],
+             "piutang": [690_000_000, 780_000_000], "persediaan": [860_000_000, 950_000_000], "aset_lancar": [1_905_000_000, 2_210_000_000],
+             "aset_tetap": [1_580_000_000, 1_640_000_000], "total_aset": [3_485_000_000, 3_850_000_000], "utang_dagang": [470_000_000, 510_000_000],
+             "utang_lancar": [1_300_000_000, 1_300_000_000], "utang_bank": [1_250_000_000, 1_080_000_000], "total_utang": [1_780_000_000, 1_660_000_000],
+             "ekuitas": [1_705_000_000, 2_190_000_000]}
+
+
+def lk_pdf(path, raster=False):
+    c = canvas.Canvas(path, pagesize=A4)
+    W, H = A4
+
+    def head(title):
+        c.setFont("Helvetica-Bold", 11)
+        c.drawCentredString(W / 2, H - 45, "CV CONTOH SEJAHTERA")
+        c.drawCentredString(W / 2, H - 60, title)
+        c.setFont("Helvetica", 9)
+        c.drawCentredString(W / 2, H - 74, "(Dinyatakan dalam Rupiah)")
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(330, H - 100, "Catatan")
+        c.drawRightString(450, H - 100, "2025")
+        c.drawRightString(550, H - 100, "2024")
+        c.line(50, H - 105, 550, H - 105)
+        return H - 122
+
+    def num(v):
+        s = f"{abs(v):,.0f}".replace(",", ".")
+        return f"({s})" if v < 0 else s
+
+    y = head("LAPORAN POSISI KEUANGAN PER 31 DESEMBER 2025 DAN 2024")
+    note = 3
+    for label, a, b, st in LK:
+        if label == "#PAGE":
+            c.showPage()
+            y = head("LAPORAN LABA RUGI UNTUK TAHUN YANG BERAKHIR 31 DESEMBER 2025 DAN 2024")
+            continue
+        c.setFont("Helvetica-Bold" if st in ("h", "b") else "Helvetica", 9)
+        c.drawString(50 if st in ("h", "b") else 62, y, label)
+        if a is not None:
+            if st == "n":
+                c.drawString(340, y, str(note))
+                note += 1
+            c.drawRightString(450, y, num(a))
+            c.drawRightString(550, y, num(b))
+        y -= 15
+    c.save()
+    if raster:
+        rasterize(path)
+
+
+def lk_excel(path):
+    from openpyxl import Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "LK"
+    ws.append(["PT CONTOH MAKMUR SENTOSA"])
+    ws.append(["Ikhtisar Laporan Keuangan (dalam ribuan rupiah)"])
+    ws.append([])
+    ws.append(["No", "Keterangan", 2023, 2024, 2025])
+    data = [("Pendapatan usaha", 4_100_000, 4_600_000, 5_150_000), ("Beban pokok pendapatan", 3_050_000, 3_400_000, 3_780_000),
+            ("Beban operasional", 520_000, 560_000, 600_000), ("Beban keuangan", 140_000, 150_000, 165_000),
+            ("Laba (rugi) tahun berjalan", 300_000, 360_000, 445_000), ("Kas dan bank", 250_000, 280_000, 330_000),
+            ("Piutang dagang", 600_000, 640_000, 700_000), ("Persediaan barang dagang", 700_000, 760_000, 820_000),
+            ("Total aset lancar", 1_600_000, 1_720_000, 1_900_000), ("Aktiva tetap bersih", 1_200_000, 1_300_000, 1_350_000),
+            ("Total aset", 2_800_000, 3_020_000, 3_250_000), ("Hutang dagang", 380_000, 400_000, 420_000), ("Pinjaman bank", 900_000, 950_000, 1_000_000),
+            ("Total liabilitas jangka pendek", 1_000_000, 1_050_000, 1_100_000), ("Total liabilitas", 1_500_000, 1_550_000, 1_600_000),
+            ("Total ekuitas", 1_300_000, 1_470_000, 1_650_000)]
+    for i, (lbl, *vals) in enumerate(data, start=1):
+        ws.append([i, lbl, *vals])
+    ws.column_dimensions["B"].width = 36
+    wb.save(path)
+
+
 if __name__ == "__main__":
     open1 = 150_000_000.0
     rows_a = gen_txns(open1, own_out="9001112223")
@@ -272,10 +371,13 @@ if __name__ == "__main__":
         for d, desc, db, cr, b in gen_txns(bal, months=(1, 2)):
             w.writerow([d.strftime("%d/%m/%Y"), " ".join(desc), idn(db) if db else "", idn(cr) if cr else "", idn(b)])
     nib_image(os.path.join(OUT, "contoh-foto-nib.png"))
+    lk_pdf(os.path.join(OUT, "contoh-laporan-keuangan.pdf"))
+    lk_pdf(os.path.join(OUT, "contoh-laporan-keuangan-scan.pdf"), raster=True)
+    lk_excel(os.path.join(OUT, "contoh-laporan-keuangan.xlsx"))
     # Kunci jawaban untuk uji otomatis
     import json
     def summ(rows, opening):
         return {"n": len(rows), "opening": opening, "closing": round(rows[-1][4], 2), "cr": round(sum(r[3] for r in rows), 2), "db": round(sum(r[2] for r in rows), 2)}
     with open(os.path.join(ROOT, "tools", "samples-expected.json"), "w") as fh:
-        json.dump({"A": summ(rows_a, open1), "B": summ(rows_b, open2), "C": summ(rows_c, open3), "scan": summ(rows_s, 60_000_000.0)}, fh, indent=1)
+        json.dump({"A": summ(rows_a, open1), "B": summ(rows_b, open2), "C": summ(rows_c, open3), "scan": summ(rows_s, 60_000_000.0), "LK": LK_EXPECT}, fh, indent=1)
     print("OK", sorted(os.listdir(OUT)))

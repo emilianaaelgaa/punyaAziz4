@@ -20,10 +20,12 @@
     { title: 'Fasilitas yang diusulkan', fields: [
       ['jenis_permohonan', 'Jenis permohonan', 'select:Baru|Perpanjangan|Tambahan|Perpanjangan & Tambahan|Restrukturisasi'],
       ['jenis_fasilitas', 'Jenis fasilitas (mis. KMK Revolving)'], ['plafon', 'Plafon (Rp)', 'money'], ['tenor_bulan', 'Jangka waktu (bulan)', 'num'],
-      ['suku_bunga', 'Suku bunga (% p.a.)', 'num'], ['tujuan_penggunaan', 'Tujuan penggunaan', 'ta'], ['sumber_pembayaran', 'Sumber pembayaran', 'ta'],
+      ['suku_bunga', 'Suku bunga (% p.a.)', 'num'], ['pola_angsuran', 'Pola pembayaran', 'select:Anuitas (angsuran tetap)|Bunga saja (revolving)'],
+      ['os_lama', 'Outstanding fasilitas lama yang digantikan (Rp)', 'money'], ['kewajiban_lama', 'Kewajiban/tahun fasilitas lama yang digantikan (Rp)', 'money'],
+      ['tujuan_penggunaan', 'Tujuan penggunaan', 'ta'], ['sumber_pembayaran', 'Sumber pembayaran', 'ta'],
       ['agunan', 'Agunan (jenis & bukti kepemilikan)', 'ta'], ['nilai_agunan', 'Nilai agunan (Rp)', 'money'], ['pengikatan_agunan', 'Pengikatan agunan'],
     ] },
-    { title: 'Keuangan & rasio (dihitung otomatis)', keuangan: true },
+    { title: 'Keuangan & penilaian rasio', keuangan: true },
     { title: 'Ringkasan rekening koran', fields: [
       ['rk_rekening', 'Rekening yang dianalisa'], ['rk_periode', 'Periode'], ['rk_rata_omzet', 'Rata-rata kredit bersih (omzet)/bulan', 'money'],
       ['rk_rata_debit', 'Rata-rata debit bersih/bulan', 'money'], ['rk_rata_saldo', 'Rata-rata saldo harian', 'money'],
@@ -41,70 +43,13 @@
       ['nama_rm', 'Nama RM'], ['jabatan_rm', 'Jabatan'], ['unit_kerja', 'Unit / cabang'], ['tgl_dokumen', 'Tanggal dokumen', 'date'],
     ] },
   ];
-  const FIN_ITEMS = [
-    ['penjualan', 'Penjualan'], ['hpp', 'HPP'], ['biaya_operasional', 'Biaya operasional'], ['biaya_bunga', 'Biaya bunga'], ['penyusutan', 'Penyusutan'],
-    ['laba_bersih', 'Laba bersih'], ['kas', 'Kas & setara kas'], ['piutang', 'Piutang usaha'], ['persediaan', 'Persediaan'], ['aset_lancar', 'Aset lancar'],
-    ['aset_tetap', 'Aset tetap'], ['total_aset', 'Total aset'], ['utang_dagang', 'Utang dagang'], ['utang_lancar', 'Utang lancar'], ['utang_bank', 'Utang bank'],
-    ['total_utang', 'Total utang'], ['ekuitas', 'Ekuitas'], ['kewajiban_bank_tahunan', 'Kewajiban bank/tahun (pokok+bunga)'],
-  ];
-  const RATIOS = [
-    ['laba_kotor', 'Laba kotor', 'money'], ['growth', 'Pertumbuhan penjualan', 'pct'], ['gpm', 'Gross profit margin', 'pct'], ['npm', 'Net profit margin', 'pct'],
-    ['current_ratio', 'Current ratio', 'x'], ['quick_ratio', 'Quick ratio', 'x'], ['der', 'DER (total utang/ekuitas)', 'x'], ['roa', 'ROA', 'pct'], ['roe', 'ROE', 'pct'],
-    ['dso', 'Hari piutang (DSO)', 'days'], ['dio', 'Hari persediaan (DIO)', 'days'], ['dpo', 'Hari utang dagang (DPO)', 'days'], ['trade_cycle', 'Trade cycle (hari)', 'days'],
-    ['ebitda', 'EBITDA (pendekatan)', 'money'], ['dscr', 'DSCR', 'x'],
-  ];
+  const FIN_ITEMS = App.ratios.FIN_ITEMS;
   const ALL_FIELDS = GROUPS.flatMap((g) => g.fields || []);
   const MONEY = new Set(ALL_FIELDS.filter((f) => f[2] === 'money').map((f) => f[0]));
   const DATES = new Set(ALL_FIELDS.filter((f) => f[2] === 'date').map((f) => f[0]));
 
   let data = {};
   const blank = () => ({ pengurus: [], keu: { periode: ['', '', ''], bulan: [12, 12, 12] }, tgl_dokumen: todayISO() });
-
-  /* ---------------------------- Perhitungan rasio ---------------------------- */
-  function computeRatios(keu) {
-    const out = [];
-    for (let i = 0; i < 3; i++) {
-      const g = (k) => parseMoney((keu[k] || [])[i]);
-      const has = (k) => String((keu[k] || [])[i] == null ? '' : (keu[k] || [])[i]).trim() !== '';
-      const div = (a, b) => (b ? a / b : null);
-      const ann = 12 / (+keu.bulan[i] || 12);
-      const r = {};
-      if (has('penjualan')) {
-        if (has('hpp')) r.laba_kotor = g('penjualan') - g('hpp');
-        if (has('hpp')) r.gpm = div(g('penjualan') - g('hpp'), g('penjualan'));
-        if (has('laba_bersih')) r.npm = div(g('laba_bersih'), g('penjualan'));
-        if (i > 0 && parseMoney((keu.penjualan || [])[i - 1])) {
-          const prev = parseMoney(keu.penjualan[i - 1]) * (12 / (+keu.bulan[i - 1] || 12));
-          r.growth = (g('penjualan') * ann) / prev - 1;
-        }
-        if (has('piutang')) r.dso = div(g('piutang'), g('penjualan') * ann) * 365;
-      }
-      if (has('hpp')) {
-        if (has('persediaan')) r.dio = div(g('persediaan'), g('hpp') * ann) * 365;
-        if (has('utang_dagang')) r.dpo = div(g('utang_dagang'), g('hpp') * ann) * 365;
-      }
-      if (r.dso != null || r.dio != null) r.trade_cycle = (r.dso || 0) + (r.dio || 0) - (r.dpo || 0);
-      if (has('aset_lancar') && g('utang_lancar')) { r.current_ratio = div(g('aset_lancar'), g('utang_lancar')); r.quick_ratio = div(g('aset_lancar') - g('persediaan'), g('utang_lancar')); }
-      if (has('total_utang') && g('ekuitas')) r.der = div(g('total_utang'), g('ekuitas'));
-      if (has('laba_bersih')) {
-        if (g('total_aset')) r.roa = div(g('laba_bersih') * ann, g('total_aset'));
-        if (g('ekuitas')) r.roe = div(g('laba_bersih') * ann, g('ekuitas'));
-        r.ebitda = g('laba_bersih') + g('biaya_bunga') + g('penyusutan');
-        if (g('kewajiban_bank_tahunan')) r.dscr = div(r.ebitda * ann, g('kewajiban_bank_tahunan'));
-      }
-      out.push(r);
-    }
-    return out;
-  }
-  function fmtRatio(v, type) {
-    if (v == null || !isFinite(v)) return '-';
-    switch (type) {
-      case 'pct': return fmt(v * 100, 1) + '%';
-      case 'x': return fmt(v, 2) + 'x';
-      case 'days': return fmt(v, 0);
-      default: return fmt(v, 0);
-    }
-  }
 
   function terbilang(n) {
     n = Math.floor(Math.abs(n));
@@ -145,8 +90,27 @@
     const keu = data.keu || blank().keu;
     for (let i = 0; i < 3; i++) d['periode_' + (i + 1)] = keu.periode[i] || ('Periode ' + (i + 1));
     FIN_ITEMS.forEach(([k]) => { for (let i = 0; i < 3; i++) { const v = (keu[k] || [])[i]; d[k + '_' + (i + 1)] = v !== '' && v != null ? fmt(parseMoney(v)) : '-'; } });
-    const rs = computeRatios(keu);
-    RATIOS.forEach(([k, , type]) => { for (let i = 0; i < 3; i++) d[k + '_' + (i + 1)] = fmtRatio(rs[i][k], type); });
+    const R = App.ratios;
+    const ev = R.evaluate(data);
+    const st = (s) => R.STATUS[s].icon + ' ' + R.STATUS[s].text;
+    ev.rows.forEach((r) => {
+      for (let i = 0; i < 3; i++) d[r.def.key + '_' + (i + 1)] = R.fmtVal(r.values[i], r.def.type);
+      d['acuan_' + r.def.key] = R.ruleText(r.rule, r.def.type) || '-';
+      d['status_' + r.def.key] = r.status === 'info' ? '-' : st(r.status);
+    });
+    ev.pfRows.forEach((r) => {
+      d[r.def.key] = r.def.type === 'money' && r.value != null ? fmtRp(r.value) : R.fmtVal(r.value, r.def.type);
+      d['acuan_' + r.def.key] = R.ruleText(r.rule, r.def.type) || '-';
+      d['status_' + r.def.key] = r.status === 'info' ? '-' : st(r.status);
+    });
+    d.penilaian = ev.rows.filter((r) => r.values.some((v) => v != null)).map((r) => ({
+      kelompok: r.def.group, rasio: r.def.label, p1: R.fmtVal(r.values[0], r.def.type), p2: R.fmtVal(r.values[1], r.def.type), p3: R.fmtVal(r.values[2], r.def.type),
+      acuan: R.ruleText(r.rule, r.def.type) || '-', status: r.status === 'info' ? '-' : st(r.status), tren: r.trend || '-',
+    }));
+    d.proforma = ev.pfRows.filter((r) => r.value != null).map((r) => ({ rasio: r.def.label, nilai: R.fmtVal(r.value, r.def.type), acuan: R.ruleText(r.rule, r.def.type) || '-', status: r.status === 'info' ? '-' : st(r.status), rumus: r.def.formula }));
+    d.ringkasan_penilaian = ev.summary;
+    d.periode_terbaru = ev.latest >= 0 ? (keu.periode[ev.latest] || 'Periode ' + (ev.latest + 1)) : '-';
+    d.pola_angsuran = data.pola_angsuran || (ev.pf.revolving ? 'Bunga saja (revolving)' : 'Anuitas (angsuran tetap)');
     d.tanggal_cetak = fmtDateLong(todayISO());
     return d;
   }
@@ -210,47 +174,11 @@
   }
 
   function keuanganTable() {
-    const keu = data.keu = data.keu || blank().keu;
-    const box = el('div');
-    box.appendChild(el('p', { class: 'small muted', text: 'Kolom 1 = periode terlama, kolom 3 = terbaru. Untuk periode tidak setahun penuh (mis. interim 6 bulan), isi jumlah bulan agar rasio disetahunkan.' }));
-    const tb = el('table', { class: 't' });
-    const head = el('tr', {}, el('th', { text: 'Pos (Rp)' }));
-    for (let i = 0; i < 3; i++) {
-      const p = el('input', { class: 'in-cell', value: keu.periode[i] || '', placeholder: ['mis. 2024', 'mis. 2025', 'mis. Jun 2026'][i] });
-      p.addEventListener('change', () => { keu.periode[i] = p.value; persist(); });
-      const b = el('input', { class: 'in-cell', type: 'number', min: 1, max: 12, value: keu.bulan[i] || 12, style: { width: '60px' }, title: 'Jumlah bulan' });
-      b.addEventListener('change', () => { keu.bulan[i] = +b.value || 12; persist(); renderRatios(); });
-      head.appendChild(el('th', {}, p, el('div', { class: 'row', style: { gap: '4px', marginTop: '4px', fontWeight: 400 } }, b, el('span', { class: 'small', text: 'bulan' }))));
-    }
-    tb.appendChild(el('thead', {}, head));
-    const body = el('tbody');
-    FIN_ITEMS.forEach(([k, l]) => {
-      keu[k] = keu[k] || ['', '', ''];
-      const tr = el('tr', {}, el('td', { class: 'nowrap', text: l }));
-      for (let i = 0; i < 3; i++) {
-        const inp = el('input', { class: 'in-cell num', 'data-money': '', inputmode: 'numeric', value: keu[k][i] !== '' && keu[k][i] != null ? fmt(parseMoney(keu[k][i])) : '' });
-        inp.addEventListener('change', () => { keu[k][i] = inp.value.trim() ? parseMoney(inp.value) : ''; persist(); renderRatios(); });
-        tr.appendChild(el('td', {}, inp));
-      }
-      body.appendChild(tr);
-    });
-    tb.appendChild(body);
-    box.appendChild(el('div', { class: 'table-wrap', style: { maxHeight: 'none' } }, tb));
-    box.appendChild(el('h4', { style: { marginTop: '14px' }, text: 'Rasio (otomatis)' }));
-    box.appendChild(el('div', { class: 'table-wrap', id: 'dg-ratios', style: { maxHeight: 'none' } }));
-    setTimeout(renderRatios, 0);
-    return box;
-  }
-  function renderRatios() {
-    const wrap = $('#dg-ratios');
-    if (!wrap) return;
-    const keu = data.keu;
-    const rs = computeRatios(keu);
-    const tb = el('table', { class: 't' });
-    tb.appendChild(el('thead', {}, el('tr', {}, el('th', { text: 'Rasio' }), [0, 1, 2].map((i) => el('th', { class: 'num', text: keu.periode[i] || 'Periode ' + (i + 1) })))));
-    tb.appendChild(el('tbody', {}, RATIOS.map(([k, l, t]) => el('tr', {}, el('td', { text: l }), [0, 1, 2].map((i) => el('td', { class: 'num', text: fmtRatio(rs[i][k], t) }))))));
-    wrap.innerHTML = '';
-    wrap.appendChild(tb);
+    const ev = App.ratios.evaluate(data);
+    return el('div', {},
+      el('p', { class: 'text-2', text: 'Data laporan keuangan, rasio penilaian kredit, dan proforma diisi di tab "6 · Analisa Keuangan & Rasio" (memakai data debitur yang sama). Semua hasilnya otomatis masuk ke dokumen Word.' }),
+      el('div', { class: 'alert ' + (ev.latest < 0 ? 'info' : ev.fail ? 'warn' : 'ok'), text: ev.summary }),
+      el('button', { class: 'btn secondary sm', onclick: () => App.show('analisa') }, 'Buka tab Analisa Keuangan & Rasio →'));
   }
 
   /* ---------------------------- Simpan / profil ---------------------------- */
@@ -320,8 +248,11 @@
       ...GROUPS.filter((g) => g.fields).map((g) => sec(g.title, g.fields.map(([k, l]) => [k, l]))),
       sec('Tambahan', [['plafon_terbilang', 'Plafon dalam huruf'], ['coverage_agunan', 'Nilai agunan / plafon'], ['tanggal_cetak', 'Tanggal hari ini']]),
       sec('Pengurus (di dalam {#pengurus}…{/pengurus})', [['no', 'Nomor urut'], ['nama', 'Nama'], ['jabatan', 'Jabatan'], ['nik', 'NIK'], ['saham', 'Kepemilikan %']]),
-      sec('Keuangan — akhiran _1, _2, _3 = kolom periode', [['periode_1', 'Label periode']].concat(FIN_ITEMS.map(([k, l]) => [k + '_1', l]))),
-      sec('Rasio — akhiran _1, _2, _3', RATIOS.map(([k, l]) => [k + '_1', l])));
+      sec('Keuangan — akhiran _1, _2, _3 = kolom periode', [['periode_1', 'Label periode'], ['periode_terbaru', 'Label periode terbaru']].concat(FIN_ITEMS.map(([k, l]) => [k + '_1', l]))),
+      sec('Rasio — akhiran _1, _2, _3; juga {acuan_…} dan {status_…} tanpa akhiran', App.ratios.DEFS.map((x) => [x.key + '_1', x.label + ' — ' + x.formula])),
+      sec('Proforma setelah fasilitas baru (juga {acuan_…}, {status_…})', App.ratios.PF_DEFS.map((x) => [x.key, x.label + ' — ' + x.formula])),
+      sec('Tabel penilaian (di satu baris tabel Word)', [['#penilaian', 'awal perulangan'], ['kelompok', ''], ['rasio', ''], ['p1', 'nilai periode 1'], ['p2', ''], ['p3', ''], ['acuan', ''], ['status', ''], ['tren', ''], ['/penilaian', 'akhir perulangan'],
+        ['#proforma', 'awal perulangan'], ['nilai', ''], ['rumus', ''], ['/proforma', 'akhir perulangan'], ['ringkasan_penilaian', 'Kesimpulan otomatis penilaian rasio']]));
   }
 
   /* ---------------------------- Excel ringkasan ---------------------------- */
@@ -444,5 +375,5 @@
     $('#dg-show-tags').addEventListener('click', () => { const w = $('#dg-tags'); if (w.classList.toggle('hidden')) return; tagList(); });
   }
 
-  App.modules.docgen = { init, receive, terbilang, computeRatios, templateData, reload: () => { data = Object.assign(blank(), store.get('dg.current', {})); renderProfiles(); renderTemplates(); renderForm(); } };
+  App.modules.docgen = { init, receive, terbilang, templateData, getData: () => data, save: persist, renderForm: () => renderForm(), reload: () => { data = Object.assign(blank(), store.get('dg.current', {})); renderProfiles(); renderTemplates(); renderForm(); } };
 })();

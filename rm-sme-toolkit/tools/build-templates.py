@@ -94,17 +94,18 @@ def kv_table(doc, rows, w1=5.5, w2=11.1):
     return t
 
 
-def grid_table(doc, header, rows, widths=None, align_right_from=1):
+def grid_table(doc, header, rows, widths=None, align_right_from=1, size=None, align_right_to=None):
     t = doc.add_table(rows=1, cols=len(header))
     t.style = "Table Grid"
     t.alignment = WD_TABLE_ALIGNMENT.CENTER
     for i, h in enumerate(header):
-        set_cell(t.rows[0].cells[i], h, bold=True, align="center" if i else None)
+        set_cell(t.rows[0].cells[i], h, bold=True, align="center" if i else None, size=size)
         shade(t.rows[0].cells[i], "D9EAEC")
     for row in rows:
         c = t.add_row().cells
         for i, v in enumerate(row):
-            set_cell(c[i], v, align="right" if i >= align_right_from else None)
+            right = i >= align_right_from and (align_right_to is None or i <= align_right_to)
+            set_cell(c[i], v, align="right" if right else None, size=size)
     if widths:
         for r in t.rows:
             for i, w in enumerate(widths):
@@ -209,53 +210,34 @@ def nak():
         ("Plafon", "{plafon}\n({plafon_terbilang})"),
         ("Jangka waktu", "{tenor_bulan} bulan"),
         ("Suku bunga", "{suku_bunga}% p.a."),
+        ("Pola pembayaran", "{pola_angsuran}"),
+        ("Angsuran / bunga per bulan", "{angsuran_baru}"),
         ("Tujuan penggunaan", "{tujuan_penggunaan}"),
         ("Sumber pembayaran", "{sumber_pembayaran}"),
     ])
 
     doc.add_heading("VI. Analisa Keuangan", level=1)
-    rows = [
-        ["Penjualan", "{penjualan_1}", "{penjualan_2}", "{penjualan_3}"],
-        ["HPP", "{hpp_1}", "{hpp_2}", "{hpp_3}"],
-        ["Laba kotor", "{laba_kotor_1}", "{laba_kotor_2}", "{laba_kotor_3}"],
-        ["Biaya operasional", "{biaya_operasional_1}", "{biaya_operasional_2}", "{biaya_operasional_3}"],
-        ["Biaya bunga", "{biaya_bunga_1}", "{biaya_bunga_2}", "{biaya_bunga_3}"],
-        ["Penyusutan", "{penyusutan_1}", "{penyusutan_2}", "{penyusutan_3}"],
-        ["Laba bersih", "{laba_bersih_1}", "{laba_bersih_2}", "{laba_bersih_3}"],
-        ["Kas & setara kas", "{kas_1}", "{kas_2}", "{kas_3}"],
-        ["Piutang usaha", "{piutang_1}", "{piutang_2}", "{piutang_3}"],
-        ["Persediaan", "{persediaan_1}", "{persediaan_2}", "{persediaan_3}"],
-        ["Aset lancar", "{aset_lancar_1}", "{aset_lancar_2}", "{aset_lancar_3}"],
-        ["Aset tetap", "{aset_tetap_1}", "{aset_tetap_2}", "{aset_tetap_3}"],
-        ["Total aset", "{total_aset_1}", "{total_aset_2}", "{total_aset_3}"],
-        ["Utang dagang", "{utang_dagang_1}", "{utang_dagang_2}", "{utang_dagang_3}"],
-        ["Utang lancar", "{utang_lancar_1}", "{utang_lancar_2}", "{utang_lancar_3}"],
-        ["Utang bank", "{utang_bank_1}", "{utang_bank_2}", "{utang_bank_3}"],
-        ["Total utang", "{total_utang_1}", "{total_utang_2}", "{total_utang_3}"],
-        ["Ekuitas", "{ekuitas_1}", "{ekuitas_2}", "{ekuitas_3}"],
-    ]
+    items = [("Penjualan", "penjualan"), ("HPP", "hpp"), ("Laba kotor", "laba_kotor"), ("Beban operasional", "biaya_operasional"),
+             ("Laba usaha (EBIT)", "laba_usaha"), ("Beban bunga", "biaya_bunga"), ("Penyusutan", "penyusutan"), ("Beban pajak", "pajak"),
+             ("Laba bersih", "laba_bersih"), ("EBITDA", "ebitda"), ("Kas & setara kas", "kas"), ("Piutang usaha", "piutang"),
+             ("Persediaan", "persediaan"), ("Aset lancar", "aset_lancar"), ("Aset tetap", "aset_tetap"), ("Total aset", "total_aset"),
+             ("Utang dagang", "utang_dagang"), ("Liabilitas jangka pendek", "utang_lancar"), ("Utang bank", "utang_bank"),
+             ("Total liabilitas", "total_utang"), ("Ekuitas", "ekuitas"), ("Kewajiban bank existing / tahun", "kewajiban_bank_tahunan")]
     p = doc.add_paragraph()
     p.add_run("Neraca & laba rugi (Rp)").bold = True
-    grid_table(doc, ["Pos", "{periode_1}", "{periode_2}", "{periode_3}"], rows, widths=[5.6, 3.7, 3.7, 3.7])
-    ratios = [
-        ["Pertumbuhan penjualan", "{growth_1}", "{growth_2}", "{growth_3}"],
-        ["Gross profit margin", "{gpm_1}", "{gpm_2}", "{gpm_3}"],
-        ["Net profit margin", "{npm_1}", "{npm_2}", "{npm_3}"],
-        ["Current ratio", "{current_ratio_1}", "{current_ratio_2}", "{current_ratio_3}"],
-        ["Quick ratio", "{quick_ratio_1}", "{quick_ratio_2}", "{quick_ratio_3}"],
-        ["DER (total utang/ekuitas)", "{der_1}", "{der_2}", "{der_3}"],
-        ["ROA", "{roa_1}", "{roa_2}", "{roa_3}"],
-        ["ROE", "{roe_1}", "{roe_2}", "{roe_3}"],
-        ["Hari piutang (DSO)", "{dso_1}", "{dso_2}", "{dso_3}"],
-        ["Hari persediaan (DIO)", "{dio_1}", "{dio_2}", "{dio_3}"],
-        ["Hari utang dagang (DPO)", "{dpo_1}", "{dpo_2}", "{dpo_3}"],
-        ["Trade cycle (hari)", "{trade_cycle_1}", "{trade_cycle_2}", "{trade_cycle_3}"],
-        ["EBITDA (pendekatan)", "{ebitda_1}", "{ebitda_2}", "{ebitda_3}"],
-        ["DSCR", "{dscr_1}", "{dscr_2}", "{dscr_3}"],
-    ]
+    grid_table(doc, ["Pos", "{periode_1}", "{periode_2}", "{periode_3}"],
+               [[lbl, "{%s_1}" % k, "{%s_2}" % k, "{%s_3}" % k] for lbl, k in items], widths=[5.6, 3.7, 3.7, 3.7], size=9)
     p = doc.add_paragraph()
-    p.add_run("Rasio keuangan").bold = True
-    grid_table(doc, ["Rasio", "{periode_1}", "{periode_2}", "{periode_3}"], ratios, widths=[5.6, 3.7, 3.7, 3.7])
+    p.add_run("Penilaian rasio kredit").bold = True
+    p.add_run(" (status berdasarkan periode {periode_terbaru})")
+    grid_table(doc, ["Kelompok", "Rasio", "{periode_1}", "{periode_2}", "{periode_3}", "Acuan", "Status"],
+               [["{#penilaian}{kelompok}", "{rasio}", "{p1}", "{p2}", "{p3}", "{acuan}", "{status}{/penilaian}"]],
+               widths=[2.6, 3.9, 2.0, 2.0, 2.0, 1.8, 2.3], align_right_from=2, align_right_to=4, size=8)
+    para(doc, "{ringkasan_penilaian}", "Kesimpulan rasio: ")
+    p = doc.add_paragraph()
+    p.add_run("Proforma setelah fasilitas diusulkan").bold = True
+    grid_table(doc, ["Rasio", "Nilai", "Acuan", "Status"],
+               [["{#proforma}{rasio}", "{nilai}", "{acuan}", "{status}{/proforma}"]], widths=[7.6, 3.2, 2.6, 3.2], align_right_from=1, align_right_to=1, size=9)
 
     doc.add_heading("VII. Analisa Mutasi Rekening", level=1)
     kv_table(doc, [
@@ -277,6 +259,7 @@ def nak():
         ("Jenis & bukti kepemilikan", "{agunan}"),
         ("Nilai agunan", "{nilai_agunan}"),
         ("Pengikatan", "{pengikatan_agunan}"),
+        ("Loan to value (LTV)", "{ltv} (acuan {acuan_ltv}) {status_ltv}"),
         ("Coverage agunan terhadap plafon", "{coverage_agunan}"),
     ])
 

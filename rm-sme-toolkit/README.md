@@ -11,8 +11,10 @@ Tidak perlu instalasi, hak admin, Python, server, maupun koneksi internet. Semua
 | 3 | **Generator NAK & Call Report** | Isi satu lembar data debitur (atau impor dari Excel), lalu buat draf Word dengan satu klik. Rasio keuangan dihitung otomatis. Bisa memakai templat Word format kantor sendiri. |
 | 4 | **Kalkulator Kelayakan** | Menghitung indikasi plafon maksimal dari DSCR, LTV agunan, dan kebutuhan modal kerja, plus simulasi angsuran. Tersedia juga versi Excel untuk HP. |
 | 5 | **Ekstraksi Legalitas** | Mengambil NIB, NPWP, nomor/tanggal akta, notaris, SK Kemenkumham, KBLI, pengurus, dan komposisi saham dari PDF atau foto (OCR offline). |
+| 6 | **Analisa Keuangan & Rasio Kredit** | Membaca laporan keuangan (PDF, PDF scan, foto, Excel) secara otomatis, lalu menilai 25+ rasio kredit dengan acuan yang bisa diatur. Juga menghitung proforma setelah fasilitas baru (DSCR, ICR, DER, Debt/EBITDA, LTV) dan membandingkan omzet rekening koran dengan penjualan di laporan keuangan. |
 
 Modul saling terhubung. Hasil modul 1 dan 5 bisa dikirim ke modul 3 dengan tombol **"Kirim ke Generator NAK"**.
+Modul 3 dan 6 memakai profil debitur yang sama, sehingga hasil penilaian rasio otomatis masuk ke dokumen NAK.
 
 ---
 
@@ -57,6 +59,24 @@ Browser yang sudah diuji: Chromium/Edge/Chrome versi terbaru. Firefox kemungkina
   `{saham}{/pengurus}` di sel terakhir pada satu baris tabel.
 - **Lembar ringkasan Excel:** unduh, isi di Excel, lalu impor kembali. Data debitur juga bisa disimpan sebagai profil.
 
+### Modul 6 — Analisa keuangan & rasio kredit
+- **Baca laporan keuangan otomatis:** tarik file PDF, PDF scan, foto, atau Excel. Neraca dan laba rugi boleh berupa file terpisah.
+  Aplikasi mengenali nama akun yang umum (Indonesia/Inggris), satuan (rupiah, ribuan, jutaan), dan urutan kolom tahun.
+  Hasilnya ditampilkan dulu untuk diperiksa sebelum diterapkan.
+- **Cek konsistensi otomatis:** total aset = liabilitas + ekuitas, aset lancar ≤ total aset, dan lain-lain. Pemeriksaan ini menangkap salah baca OCR dan salah ketik.
+- **Rasio yang dinilai (per periode, dengan acuan & status ✓/✗, plus tren):**
+  - *Pertumbuhan & profitabilitas:* pertumbuhan penjualan, GPM, OPM, NPM, ROA, ROE
+  - *Likuiditas:* current ratio, quick ratio, cash ratio, modal kerja bersih
+  - *Solvabilitas & leverage:* DER, gearing (utang bank/ekuitas), debt to asset, Debt/EBITDA
+  - *Kemampuan bayar:* EBITDA, ICR, DSCR
+  - *Aktivitas:* DSO, DIO, DPO, trade cycle, TATO, kebutuhan modal kerja
+- **Proforma setelah fasilitas baru:** angsuran baru, DSCR, ICR, DER, Debt/EBITDA, LTV, coverage agunan, plafon KMK ÷ kebutuhan modal kerja,
+  mutasi rekening koran ÷ penjualan laporan keuangan, dan saldo rata-rata ÷ angsuran.
+  Untuk perpanjangan/take over, isi outstanding dan kewajiban fasilitas lama agar tidak terhitung dua kali.
+- **Acuan bawaan adalah acuan umum analisa kredit, bukan ketentuan resmi** (mis. DSCR ≥ 1,25x, DER ≤ 2,5x, current ratio ≥ 1,0x,
+  ICR ≥ 1,5x, Debt/EBITDA ≤ 4x, LTV ≤ 80%). Semua acuan bisa diubah di *Pengaturan → Acuan rasio penilaian kredit*.
+- Untuk laporan interim (mis. Januari–Juni), isi jumlah bulan agar rasio disetahunkan.
+
 ### Modul 4 — Kalkulator
 - Plafon indikatif = nilai **terkecil** dari: kemampuan bayar (DSCR), agunan (nilai × LTV), dan kebutuhan modal kerja (khusus KMK).
 - Parameter DSCR minimum, LTV per jenis agunan, porsi pembiayaan, dan pembulatan bisa diatur di **Pengaturan**.
@@ -82,6 +102,8 @@ Browser yang sudah diuji: Chromium/Edge/Chrome versi terbaru. Firefox kemungkina
   Data bisa dihapus kapan saja di *Pengaturan → Hapus semua data*. Gunakan *Ekspor backup* untuk memindahkan data ke laptop lain.
 - File hasil (Excel/Word/.ics) tersimpan di folder Unduhan. Perlakukan sesuai klasifikasi data nasabah.
 - Sebelum dipakai untuk data nasabah sungguhan, **mintalah reviu/izin dari unit TI atau keamanan informasi** sesuai kebijakan yang berlaku.
+- **Laptop pribadi:** aplikasinya berjalan sama persis, tetapi menyimpan data nasabah di perangkat pribadi umumnya diatur ketat oleh kebijakan bank.
+  Selama masih di laptop pribadi, gunakan data contoh/fiktif. Data nasabah asli baru diproses di laptop kantor atau setelah ada izin.
 
 ## Keterbatasan
 
@@ -89,6 +111,7 @@ Browser yang sudah diuji: Chromium/Edge/Chrome versi terbaru. Firefox kemungkina
   Format bank yang tidak biasa (misalnya kolom terpecah aneh, atau tanpa saldo) mungkin perlu disesuaikan. Indikator *Validasi saldo* akan memberi tahu bila ada masalah.
 - OCR tidak sempurna. Angka yang salah baca tertangkap oleh validasi saldo, tetapi nama dan nomor pada dokumen legal tetap wajib dicek manual.
 - Ekstraksi legalitas berbasis pola teks. Akta dengan redaksi yang tidak umum mungkin tidak semua datanya terbaca.
+- Pembaca laporan keuangan mengenali nama akun yang lazim. Akun dengan nama tidak biasa bisa luput dan perlu diisi manual (ditandai "tidak ditemukan" saat pemeriksaan).
 - Kalkulator memberi **indikasi**, bukan keputusan kredit.
 
 ## Struktur folder

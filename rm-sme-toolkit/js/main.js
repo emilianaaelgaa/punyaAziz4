@@ -11,7 +11,10 @@
     if (page === 'rk') App.modules.statement.onShow();
     if (page === 'reminder') App.modules.reminder.render();
     if (page === 'settings') App.modules.settings.usage();
+    if (page === 'analisa') App.modules.analysis.onShow();
+    if (page === 'docgen') App.modules.docgen.renderForm();
   }
+  App.show = show;
 
   App.modules.home = {
     refresh() {
@@ -35,7 +38,7 @@
     }
     $$('#tabs button').forEach((b) => b.addEventListener('click', () => show(b.dataset.page)));
     $$('[data-goto]').forEach((c) => c.addEventListener('click', () => show(c.dataset.goto)));
-    ['statement', 'reminder', 'docgen', 'calculator', 'legal', 'settings'].forEach((m) => {
+    ['statement', 'reminder', 'docgen', 'analysis', 'calculator', 'legal', 'settings'].forEach((m) => {
       try { App.modules[m].init(); } catch (e) { console.error('Gagal memulai modul ' + m, e); }
     });
     App.modules.home.refresh();

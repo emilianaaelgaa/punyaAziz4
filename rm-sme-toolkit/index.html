@@ -26,6 +26,7 @@
   <button data-page="docgen"><span class="n">3</span>Generator NAK &amp; Call Report</button>
   <button data-page="calc"><span class="n">4</span>Kalkulator Kelayakan</button>
   <button data-page="legal"><span class="n">5</span>Ekstraksi Legalitas</button>
+  <button data-page="analisa"><span class="n">6</span>Analisa Keuangan &amp; Rasio</button>
   <button data-page="settings">Pengaturan &amp; Backup</button>
 </nav>
 
@@ -52,8 +53,10 @@
       <p class="text-2">Indikasi plafon maksimal berdasarkan DSCR, LTV agunan, dan kebutuhan modal kerja, plus simulasi angsuran.</p></div>
     <div class="card mod" data-goto="legal"><div class="n">5</div><h3>Ekstraksi Dokumen Legalitas</h3>
       <p class="text-2">Ambil NIB, NPWP, nomor &amp; tanggal akta, notaris, pengurus, dan komposisi saham dari PDF/foto (OCR offline).</p></div>
+    <div class="card mod" data-goto="analisa"><div class="n">6</div><h3>Analisa Keuangan &amp; Rasio Kredit</h3>
+      <p class="text-2">Baca laporan keuangan (PDF/scan/Excel) otomatis, lalu nilai 25+ rasio kredit (DSCR, DER, ICR, Debt/EBITDA, current ratio, dll.) plus proforma dan LTV setelah fasilitas baru.</p></div>
     <div class="card mod" data-goto="settings"><div class="n">⚙</div><h3>Pengaturan &amp; Backup</h3>
-      <p class="text-2">Parameter kredit (DSCR, LTV), kata kunci contra, backup/restore data, dan uji isolasi jaringan.</p></div>
+      <p class="text-2">Acuan rasio, parameter kalkulator (DSCR, LTV), kata kunci contra, backup/restore data, dan uji isolasi jaringan.</p></div>
   </div>
   <div class="card">
     <h3>Prinsip keamanan yang diterapkan</h3>
@@ -338,6 +341,47 @@
   </div>
 </section>
 
+<!-- ============================ 6. ANALISA KEUANGAN & RASIO ============================ -->
+<section class="page" id="page-analisa">
+  <div class="page-head">
+    <div>
+      <h2>6 · Analisa Keuangan &amp; Rasio Kredit</h2>
+      <p>Baca laporan keuangan secara otomatis atau isi manual. Rasio penilaian kredit lalu dihitung dan dibandingkan dengan acuan,
+        termasuk proforma setelah fasilitas baru. Data di sini sama dengan profil debitur di tab 3, dan hasilnya otomatis masuk ke dokumen NAK.</p>
+    </div>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Baca laporan keuangan</h3>
+      <div class="drop" id="an-drop"><strong>Tarik laporan keuangan ke sini</strong> atau klik untuk memilih<br><small>PDF · PDF scan · foto · Excel · CSV — neraca &amp; laba rugi boleh file terpisah</small></div>
+      <input type="file" id="an-file" multiple accept=".pdf,.xlsx,.xls,.csv,.jpg,.jpeg,.png" class="hidden">
+      <div id="an-progress" class="hidden" style="margin-top:10px"><div class="progress"><div></div></div><small class="muted"></small></div>
+    </div>
+    <div class="card">
+      <h3>Debitur &amp; ekspor</h3>
+      <p class="text-2" id="an-debitur"></p>
+      <div class="row">
+        <button class="btn secondary sm" id="an-template">Unduh templat Excel keuangan</button>
+        <button class="btn secondary sm" id="an-copy">Salin ringkasan</button>
+        <button class="btn sm" id="an-export">Ekspor Excel analisa</button>
+      </div>
+      <p class="small muted" style="margin-top:10px">Ganti debitur / simpan profil di tab 3. Acuan setiap rasio bisa diubah di menu <em>Pengaturan</em>.</p>
+    </div>
+  </div>
+  <div class="card"><h3>Ringkasan penilaian</h3><div id="an-summary"></div></div>
+  <div class="card">
+    <h3>Laporan keuangan</h3>
+    <p class="small muted">Kolom 1 = periode terlama, kolom 3 = terbaru. Untuk laporan interim (mis. Januari–Juni), isi jumlah bulan agar rasio disetahunkan.</p>
+    <div id="an-input"></div>
+  </div>
+  <div class="card"><h3>Rasio penilaian kredit</h3><div id="an-ratios"></div></div>
+  <div class="card">
+    <h3>Fasilitas diusulkan &amp; proforma</h3>
+    <div id="an-pf-input"></div>
+    <div id="an-pf" style="margin-top:12px"></div>
+  </div>
+</section>
+
 <!-- ============================ PENGATURAN ============================ -->
 <section class="page" id="page-settings">
   <div class="page-head"><div><h2>Pengaturan &amp; Backup</h2>
@@ -354,6 +398,13 @@
       <h4 style="margin-top:14px">Rasio LTV maksimum per jenis agunan (%)</h4>
       <div id="st-ltv" class="grid g2"></div>
       <div class="row end" style="margin-top:12px"><button class="btn secondary sm" id="st-reset-params">Kembalikan bawaan</button><button class="btn sm" id="st-save-params">Simpan parameter</button></div>
+    </div>
+    <div class="card">
+      <h3>Acuan rasio penilaian kredit</h3>
+      <p class="small text-2">Nilai bawaan adalah acuan umum analisa kredit, bukan ketentuan resmi. Sesuaikan dengan kebijakan yang berlaku.
+        DSCR mengikuti parameter "DSCR minimum" di samping.</p>
+      <div id="st-rules"></div>
+      <div class="row end" style="margin-top:12px"><button class="btn secondary sm" id="st-reset-rules">Kembalikan bawaan</button><button class="btn sm" id="st-save-rules">Simpan acuan</button></div>
     </div>
     <div class="card">
       <h3>Kata kunci rekening koran</h3>
@@ -400,7 +451,10 @@
 <script src="js/statement.js"></script>
 <script src="js/reminder.js"></script>
 <script src="js/templates-data.js"></script>
+<script src="js/ratios.js"></script>
+<script src="js/fin-reader.js"></script>
 <script src="js/docgen.js"></script>
+<script src="js/analysis.js"></script>
 <script src="js/calculator.js"></script>
 <script src="js/legal-parser.js"></script>
 <script src="js/legal.js"></script>

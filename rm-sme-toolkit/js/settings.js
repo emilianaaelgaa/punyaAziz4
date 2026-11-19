@@ -29,6 +29,43 @@
     store.set('params', { dscr: parseFloat($('#st-dscr').value) || 1.25, porsi: parseFloat($('#st-porsi').value) || 70, round: parseMoney($('#st-round').value) || 1, bunga: parseFloat($('#st-bunga').value) || 0, ltv });
     toast('Parameter disimpan');
     App.modules.calculator.applyParams();
+    App.modules.analysis.render();
+  }
+  function renderRules() {
+    const RD = App.ratios;
+    const wrap = $('#st-rules');
+    wrap.innerHTML = '';
+    const tb = el('table', { class: 't' });
+    tb.appendChild(el('thead', {}, el('tr', {}, el('th', { text: 'Rasio' }), el('th', { text: 'Syarat' }), el('th', { text: 'Nilai acuan' }))));
+    const body = el('tbody');
+    RD.ALL_RULE_DEFS.forEach((d) => {
+      if (d.rule && d.rule.fromParams) {
+        body.appendChild(el('tr', {}, el('td', { text: d.label }), el('td', { text: '≥' }), el('td', { class: 'small muted', text: 'ikut "DSCR minimum"' })));
+        return;
+      }
+      const r = RD.rule(d.key);
+      const op = el('select', { class: 'in-cell', 'data-key': d.key, 'data-k': 'op', style: { width: '70px' } }, ['>=', '>', '<=', '<'].map((o) => el('option', { value: o, text: { '>=': '≥', '>': '>', '<=': '≤', '<': '<' }[o] })));
+      op.value = r.op;
+      const shown = d.type === 'pct' ? Math.round(r.val * 10000) / 100 : r.val;
+      const v = el('input', { class: 'in-cell num', type: 'number', step: 'any', value: shown, 'data-key': d.key, 'data-k': 'val', 'data-type': d.type, style: { width: '90px' } });
+      body.appendChild(el('tr', {}, el('td', { text: d.label }), el('td', {}, op), el('td', { class: 'nowrap' }, v, ' ', { pct: '%', x: 'x', money: 'Rp', days: 'hari' }[d.type] || '')));
+    });
+    tb.appendChild(body);
+    wrap.appendChild(el('div', { class: 'table-wrap', style: { maxHeight: '360px' } }, tb));
+  }
+  function saveRules() {
+    const out = {};
+    $('#st-rules').querySelectorAll('select[data-k="op"]').forEach((sel) => {
+      const key = sel.dataset.key;
+      const inp = $('#st-rules').querySelector(`input[data-key="${key}"]`);
+      let val = parseFloat(inp.value);
+      if (isNaN(val)) return;
+      if (inp.dataset.type === 'pct') val /= 100;
+      out[key] = { op: sel.value, val };
+    });
+    store.set('ratioRules', out);
+    toast('Acuan rasio disimpan');
+    App.modules.analysis.render();
   }
   function renderKw() {
     const k = App.keywords();
@@ -66,7 +103,10 @@
   function init() {
     renderParams();
     renderKw();
+    renderRules();
     usage();
+    $('#st-save-rules').addEventListener('click', saveRules);
+    $('#st-reset-rules').addEventListener('click', () => { store.remove('ratioRules'); renderRules(); App.modules.analysis.render(); toast('Acuan bawaan dipulihkan'); });
     $('#st-save-params').addEventListener('click', saveParams);
     $('#st-reset-params').addEventListener('click', () => { store.remove('params'); renderParams(); App.modules.calculator.applyParams(); toast('Parameter bawaan dipulihkan'); });
     $('#st-save-kw').addEventListener('click', saveKw);

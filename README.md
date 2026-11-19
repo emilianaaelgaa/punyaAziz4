@@ -8,5 +8,6 @@ pekerjaan administratif RM SME. Isinya:
 3. Generator draf NAK & Call Report (Word)
 4. Kalkulator kelayakan & simulasi angsuran (aplikasi + versi Excel untuk HP)
 5. Ekstraksi data dokumen legalitas (OCR offline)
+6. Analisa keuangan & rasio kredit (baca laporan keuangan otomatis, 25+ rasio dengan acuan, proforma DSCR/DER/LTV)
 
 Cara pakai: buka `rm-sme-toolkit/index.html` di Microsoft Edge atau Chrome.
