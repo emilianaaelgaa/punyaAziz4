@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  KEAMANAN: Content-Security-Policy di bawah memblokir SEMUA koneksi jaringan
+  (fetch/XHR/WebSocket/beacon/form). Aplikasi hanya boleh memuat file dari
+  folder ini sendiri. Data nasabah tidak dapat terkirim keluar laptop.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' file: blob: 'wasm-unsafe-eval'; worker-src blob:; connect-src blob: data:; img-src 'self' file: data: blob:; style-src 'self' file: 'unsafe-inline'; font-src 'self' file: data:; form-action 'none'; base-uri 'none'">
+<title>RM SME Toolkit — Offline</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">RM SME Toolkit <small>alat bantu kerja harian — offline</small></div>
+  <button class="offline-badge" id="offline-badge" title="Klik untuk uji isolasi jaringan">🔒 Offline · data tetap di laptop</button>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button data-page="home" class="active">Beranda</button>
+  <button data-page="rk"><span class="n">1</span>Rekening Koran</button>
+  <button data-page="reminder"><span class="n">2</span>Pengingat Jatuh Tempo</button>
+  <button data-page="docgen"><span class="n">3</span>Generator NAK &amp; Call Report</button>
+  <button data-page="calc"><span class="n">4</span>Kalkulator Kelayakan</button>
+  <button data-page="legal"><span class="n">5</span>Ekstraksi Legalitas</button>
+  <button data-page="settings">Pengaturan &amp; Backup</button>
+</nav>
+
+<main>
+
+<!-- ============================ BERANDA ============================ -->
+<section class="page active" id="page-home">
+  <div class="page-head">
+    <div>
+      <h2>Selamat datang</h2>
+      <p>Lima otomatisasi untuk pekerjaan administratif RM SME. Semua pemrosesan berjalan di browser laptop Anda —
+        <strong>tidak ada data yang diunggah ke internet</strong>. Aplikasi ini bisa dibuka tanpa koneksi sama sekali.</p>
+    </div>
+  </div>
+  <div id="home-alerts"></div>
+  <div class="grid g3">
+    <div class="card mod" data-goto="rk"><div class="n">1</div><h3>Rekap Mutasi Rekening Koran</h3>
+      <p class="text-2">Baca PDF/CSV/Excel rekening koran bank lain, kelompokkan debit/kredit, buang transaksi contra, hitung omzet &amp; rata-rata saldo harian.</p></div>
+    <div class="card mod" data-goto="reminder"><div class="n">2</div><h3>Pengingat Jatuh Tempo</h3>
+      <p class="text-2">Daftar fasilitas, asuransi agunan, covenant &amp; dokumen legal. Pengingat H-60/H-30 masuk ke kalender Outlook (tersinkron ke HP).</p></div>
+    <div class="card mod" data-goto="docgen"><div class="n">3</div><h3>Generator NAK &amp; Call Report</h3>
+      <p class="text-2">Isi satu lembar data debitur (atau impor dari Excel), lalu buat draf Word otomatis dari templat — bisa pakai templat format kantor Anda sendiri.</p></div>
+    <div class="card mod" data-goto="calc"><div class="n">4</div><h3>Kalkulator Kelayakan</h3>
+      <p class="text-2">Indikasi plafon maksimal berdasarkan DSCR, LTV agunan, dan kebutuhan modal kerja, plus simulasi angsuran.</p></div>
+    <div class="card mod" data-goto="legal"><div class="n">5</div><h3>Ekstraksi Dokumen Legalitas</h3>
+      <p class="text-2">Ambil NIB, NPWP, nomor &amp; tanggal akta, notaris, pengurus, dan komposisi saham dari PDF/foto (OCR offline).</p></div>
+    <div class="card mod" data-goto="settings"><div class="n">⚙</div><h3>Pengaturan &amp; Backup</h3>
+      <p class="text-2">Parameter kredit (DSCR, LTV), kata kunci contra, backup/restore data, dan uji isolasi jaringan.</p></div>
+  </div>
+  <div class="card">
+    <h3>Prinsip keamanan yang diterapkan</h3>
+    <ul>
+      <li><strong>Tanpa internet:</strong> aplikasi memblokir semua koneksi keluar (Content-Security-Policy). Klik lencana 🔒 di kanan atas untuk mengujinya.</li>
+      <li><strong>Data lokal:</strong> data tersimpan di penyimpanan browser laptop ini saja. Gunakan menu <em>Pengaturan &amp; Backup</em> untuk ekspor/hapus.</li>
+      <li><strong>Hasil wajib direviu:</strong> hasil baca PDF/OCR dan kalkulator adalah alat bantu; verifikasi tetap tanggung jawab RM sesuai ketentuan.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 1. REKENING KORAN ============================ -->
+<section class="page" id="page-rk">
+  <div class="page-head">
+    <div>
+      <h2>1 · Rekap Mutasi Rekening Koran</h2>
+      <p>Unggah satu atau beberapa file rekening koran (PDF e-statement, CSV, atau Excel). Beberapa file dari rekening berbeda milik nasabah yang sama
+        boleh diunggah sekaligus — transfer antar rekening sendiri akan terdeteksi otomatis sebagai <em>contra</em>.</p>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <h3>Data nasabah &amp; aturan contra</h3>
+      <div class="grid g2">
+        <label class="f">Nama nasabah / debitur<input id="rk-nama" placeholder="mis. PT Maju Jaya Abadi"></label>
+        <label class="f">Jendela pencocokan pasangan contra (hari)<input id="rk-window" type="number" min="0" max="10" value="3"></label>
+      </div>
+      <label class="f" style="margin-top:10px">Nama pemilik, pengurus, perusahaan afiliasi &amp; no. rekening milik sendiri
+        <span class="hint">Satu per baris. Transaksi yang keterangannya memuat teks ini otomatis ditandai contra.</span>
+        <textarea id="rk-own" rows="3" placeholder="MAJU JAYA&#10;BUDI SANTOSO&#10;1234567890"></textarea></label>
+      <div class="row" style="margin-top:8px">
+        <label class="check"><input type="checkbox" id="rk-pair-same"> Pasangan masuk–keluar bernilai sama di rekening yang sama juga dianggap contra (default: hanya ditandai "perlu cek")</label>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Unggah file</h3>
+      <div class="drop" id="rk-drop"><strong>Tarik file ke sini</strong> atau klik untuk memilih<br><small>PDF · CSV · XLSX · XLS · TXT — boleh banyak file</small></div>
+      <input type="file" id="rk-file" multiple accept=".pdf,.csv,.xlsx,.xls,.txt" class="hidden">
+      <div id="rk-progress" class="hidden" style="margin-top:10px"><div class="progress"><div></div></div><small class="muted" id="rk-progress-text"></small></div>
+      <div class="row" style="margin-top:10px">
+        <label class="f" style="width:170px">Tahun (bila tanggal tanpa tahun)<input id="rk-year" type="number" placeholder="otomatis"></label>
+        <div class="spacer"></div>
+        <button class="btn secondary sm" id="rk-sample">Coba dengan contoh data fiktif</button>
+        <button class="btn danger sm" id="rk-clear">Kosongkan</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="rk-mapping"></div>
+  <div id="rk-files"></div>
+
+  <div id="rk-results" class="hidden">
+    <div class="card">
+      <div class="row">
+        <h3 style="margin:0">Ringkasan</h3>
+        <select id="rk-scope" style="width:auto"></select>
+        <div class="spacer"></div>
+        <button class="btn secondary sm" id="rk-copy">Salin ringkasan</button>
+        <button class="btn secondary sm" id="rk-to-nak">Kirim ke Generator NAK</button>
+        <button class="btn sm" id="rk-export">Ekspor Excel</button>
+      </div>
+      <div class="grid g4" id="rk-stats" style="margin-top:14px"></div>
+    </div>
+    <div class="card">
+      <h3>Tren bulanan: mutasi kredit bersih (omzet) vs debit bersih</h3>
+      <div id="rk-chart"></div>
+    </div>
+    <div class="card">
+      <h3>Rekap per bulan</h3>
+      <div class="table-wrap" id="rk-monthly"></div>
+      <p class="small muted" style="margin-top:8px">Kredit bersih (omzet) = total kredit − contra − bunga/jasa giro − pencairan kredit − koreksi/reversal.
+        Rata-rata saldo harian = rata-rata saldo akhir hari untuk setiap hari kalender (saldo dibawa ke hari tanpa transaksi).</p>
+    </div>
+    <div class="card">
+      <div class="row">
+        <h3 style="margin:0">Daftar transaksi</h3>
+        <select id="rk-filter" style="width:auto">
+          <option value="all">Semua</option><option value="cr">Kredit</option><option value="db">Debit</option>
+          <option value="contra">Contra</option><option value="review">Perlu cek</option><option value="mismatch">Saldo tidak cocok</option>
+        </select>
+        <input id="rk-search" placeholder="Cari keterangan…" style="max-width:260px">
+        <div class="spacer"></div>
+        <small class="muted">Kategori &amp; tanda contra bisa diubah — ringkasan dihitung ulang otomatis.</small>
+      </div>
+      <div class="table-wrap" id="rk-txns" style="margin-top:10px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 2. PENGINGAT ============================ -->
+<section class="page" id="page-reminder">
+  <div class="page-head">
+    <div>
+      <h2>2 · Pengingat Jatuh Tempo &amp; Kelengkapan Dokumen</h2>
+      <p>Catat tenggat setiap debitur. Ekspor ke kalender Outlook agar pengingat H-60/H-30 muncul otomatis di laptop dan aplikasi Outlook di HP —
+        tanpa perlu membuka aplikasi ini.</p>
+    </div>
+  </div>
+  <div class="grid g4" id="rm-stats"></div>
+  <div class="card">
+    <div class="row">
+      <button class="btn" id="rm-add">+ Tambah item</button>
+      <button class="btn secondary" id="rm-import">Impor Excel</button>
+      <input type="file" id="rm-file" accept=".xlsx,.xls,.csv" class="hidden">
+      <button class="btn secondary" id="rm-template">Unduh templat Excel</button>
+      <button class="btn secondary" id="rm-export">Ekspor Excel</button>
+      <div class="spacer"></div>
+      <button class="btn" id="rm-ics">📅 Ekspor ke Outlook (.ics)</button>
+      <button class="btn secondary" id="rm-copy">Salin ringkasan (Teams)</button>
+      <button class="btn secondary" id="rm-mail">Email ringkasan</button>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <input id="rm-search" placeholder="Cari debitur / keterangan…" style="max-width:280px">
+      <select id="rm-f-jenis" style="width:auto"><option value="">Semua jenis</option></select>
+      <select id="rm-f-range" style="width:auto">
+        <option value="open">Semua yang aktif</option><option value="overdue">Lewat jatuh tempo</option>
+        <option value="30">≤ 30 hari</option><option value="60">≤ 60 hari</option><option value="90">≤ 90 hari</option>
+        <option value="done">Selesai</option><option value="all">Semua</option>
+      </select>
+      <div class="spacer"></div>
+      <label class="f" style="flex-direction:row;align-items:center;gap:6px">Pengingat H-
+        <input id="rm-offsets" style="width:130px" value="60,30,7,0" title="Daftar hari sebelum jatuh tempo, pisahkan dengan koma"></label>
+      <label class="f" style="flex-direction:row;align-items:center;gap:6px">jam <input id="rm-time" type="time" value="08:00" style="width:110px"></label>
+    </div>
+    <div class="table-wrap" id="rm-table" style="margin-top:12px"></div>
+  </div>
+  <details class="box">
+    <summary>Opsional: notifikasi otomatis ke Microsoft Teams via Power Automate (jaringan internal BNI)</summary>
+    <div id="rm-pa-guide"></div>
+  </details>
+</section>
+
+<!-- ============================ 3. GENERATOR NAK ============================ -->
+<section class="page" id="page-docgen">
+  <div class="page-head">
+    <div>
+      <h2>3 · Generator Draf NAK &amp; Call Report</h2>
+      <p>Isi data debitur sekali (atau impor dari lembar ringkasan Excel), lalu tekan satu tombol untuk membuat dokumen Word.
+        Rasio keuangan dihitung otomatis. Anda bisa memakai templat bawaan atau templat Word format kantor Anda sendiri.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="row">
+      <label class="f" style="min-width:240px">Profil debitur tersimpan<select id="dg-profiles"></select></label>
+      <button class="btn secondary sm" id="dg-new">Baru</button>
+      <button class="btn secondary sm" id="dg-save">Simpan profil</button>
+      <button class="btn danger sm" id="dg-delete">Hapus profil</button>
+      <div class="spacer"></div>
+      <button class="btn secondary sm" id="dg-xlsx-template">Unduh lembar ringkasan Excel</button>
+      <button class="btn secondary sm" id="dg-xlsx-import">Impor dari Excel</button>
+      <input type="file" id="dg-xlsx-file" accept=".xlsx,.xls" class="hidden">
+    </div>
+  </div>
+  <div id="dg-form"></div>
+  <div class="card">
+    <h3>Buat dokumen</h3>
+    <div class="grid g2">
+      <div>
+        <label class="f">Templat<select id="dg-template"></select></label>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="dg-generate">📄 Buat dokumen Word</button>
+          <button class="btn secondary" id="dg-download-template">Unduh templat ini (untuk diedit)</button>
+        </div>
+      </div>
+      <div>
+        <label class="f">Tambah templat sendiri (.docx berisi tag seperti <code>{nama_perusahaan}</code>)
+          <input type="file" id="dg-upload-template" accept=".docx"></label>
+        <div class="row" style="margin-top:8px">
+          <button class="btn ghost sm" id="dg-show-tags">Lihat daftar tag yang tersedia</button>
+          <button class="btn danger sm" id="dg-remove-template">Hapus templat terpilih</button>
+        </div>
+      </div>
+    </div>
+    <div id="dg-tags" class="hidden" style="margin-top:12px"></div>
+  </div>
+</section>
+
+<!-- ============================ 4. KALKULATOR ============================ -->
+<section class="page" id="page-calc">
+  <div class="page-head">
+    <div>
+      <h2>4 · Kalkulator Kelayakan &amp; Simulasi Angsuran</h2>
+      <p>Indikasi cepat saat kunjungan. Parameter (DSCR minimum, LTV per jenis agunan, porsi pembiayaan) dapat disesuaikan dengan ketentuan
+        kredit SME yang berlaku di menu <em>Pengaturan</em>. Versi Excel untuk HP tersedia di folder <code>excel/</code>.</p>
+    </div>
+  </div>
+  <div class="grid g2">
+    <div>
+      <div class="card">
+        <h3>Fasilitas</h3>
+        <div class="grid g2">
+          <label class="f">Jenis kredit
+            <select id="kc-jenis">
+              <option value="ki">Angsuran tetap (anuitas) — KI / KMK installment</option>
+              <option value="kmk">KMK revolving — bunga bulanan, pokok di akhir</option>
+            </select></label>
+          <label class="f">Suku bunga (% p.a.)<input id="kc-bunga" type="number" step="0.01" value="11"></label>
+          <label class="f">Tenor (bulan)<input id="kc-tenor" type="number" value="60"></label>
+          <label class="f">Plafon diajukan (Rp) <span class="hint">opsional, untuk uji kelayakan</span><input id="kc-diajukan" inputmode="numeric" data-money></label>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Kemampuan bayar</h3>
+        <div class="grid g2">
+          <label class="f">Laba bersih per bulan (Rp)<input id="kc-laba" inputmode="numeric" data-money></label>
+          <label class="f">Penyusutan per bulan (Rp) <span class="hint">opsional</span><input id="kc-susut" inputmode="numeric" data-money></label>
+          <label class="f">Angsuran pinjaman existing per bulan (Rp)<input id="kc-existing" inputmode="numeric" data-money></label>
+          <label class="f">DSCR minimum<input id="kc-dscr" type="number" step="0.05"></label>
+        </div>
+      </div>
+      <div class="card" id="kc-omzet-card">
+        <h3>Kebutuhan modal kerja <small class="muted">(untuk KMK)</small></h3>
+        <div class="grid g2">
+          <label class="f">Omzet per bulan (Rp)<input id="kc-omzet" inputmode="numeric" data-money></label>
+          <label class="f">Margin laba kotor (%)<input id="kc-margin" type="number" step="0.1" value="20"></label>
+          <label class="f">Siklus usaha / trade cycle (hari)<input id="kc-tc" type="number" value="60"></label>
+          <label class="f">Porsi pembiayaan bank (%)<input id="kc-porsi" type="number" step="1"></label>
+          <label class="f">KMK existing di bank lain (Rp)<input id="kc-kmk-existing" inputmode="numeric" data-money></label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row"><h3 style="margin:0">Agunan</h3><div class="spacer"></div><button class="btn secondary sm" id="kc-add-agunan">+ Agunan</button></div>
+        <div id="kc-agunan" style="margin-top:10px"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="position:sticky;top:110px">
+        <h3>Hasil indikatif</h3>
+        <div class="text-2">Plafon maksimal indikatif</div>
+        <div class="result-big" id="kc-result">Rp 0</div>
+        <div class="small muted" id="kc-binding"></div>
+        <ul class="check-list" id="kc-breakdown" style="margin-top:12px"></ul>
+        <div id="kc-test" style="margin-top:14px"></div>
+        <div class="row" style="margin-top:14px">
+          <button class="btn secondary sm" id="kc-copy">Salin hasil</button>
+          <button class="btn secondary sm" id="kc-schedule-btn">Tabel angsuran</button>
+          <button class="btn secondary sm" id="kc-export">Ekspor Excel</button>
+        </div>
+        <p class="small muted" style="margin-top:12px">Hasil bersifat indikasi awal untuk diskusi dengan calon debitur — bukan keputusan kredit.
+          Keputusan tetap melalui analisa &amp; persetujuan sesuai ketentuan.</p>
+      </div>
+    </div>
+  </div>
+  <div class="card hidden" id="kc-schedule"></div>
+</section>
+
+<!-- ============================ 5. LEGALITAS ============================ -->
+<section class="page" id="page-legal">
+  <div class="page-head">
+    <div>
+      <h2>5 · Ekstraksi Data Dokumen Legalitas</h2>
+      <p>Unggah PDF atau foto dokumen (NIB, NPWP, akta pendirian/perubahan, SK Kemenkumham, KTP). PDF digital dibaca langsung;
+        PDF hasil scan dan foto dibaca dengan OCR yang berjalan offline di laptop.</p>
+    </div>
+  </div>
+  <div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(0,3fr)" id="lg-grid">
+    <div class="card">
+      <div class="drop" id="lg-drop"><strong>Tarik dokumen ke sini</strong> atau klik untuk memilih<br><small>PDF · JPG · PNG — boleh banyak file</small></div>
+      <input type="file" id="lg-file" multiple accept=".pdf,.jpg,.jpeg,.png,.bmp,.webp,.tif,.tiff" class="hidden">
+      <div class="row" style="margin-top:10px">
+        <label class="check"><input type="checkbox" id="lg-force-ocr"> Paksa OCR (meski PDF berisi teks)</label>
+        <div class="spacer"></div>
+        <button class="btn secondary sm" id="lg-sample">Coba dengan contoh teks fiktif</button>
+        <button class="btn danger sm" id="lg-clear">Kosongkan</button>
+      </div>
+      <div id="lg-progress" class="hidden" style="margin-top:10px"><div class="progress"><div></div></div><small class="muted" id="lg-progress-text"></small></div>
+      <div id="lg-docs" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <h3 style="margin:0">Hasil ekstraksi</h3>
+        <div class="spacer"></div>
+        <button class="btn secondary sm" id="lg-reparse">Baca ulang teks</button>
+        <button class="btn secondary sm" id="lg-copy">Salin tabel</button>
+        <button class="btn secondary sm" id="lg-export">Ekspor Excel</button>
+        <button class="btn sm" id="lg-to-nak">Kirim ke Generator NAK</button>
+      </div>
+      <p class="small muted" style="margin:8px 0">Semua kolom bisa diedit. Hasil OCR wajib dicocokkan dengan dokumen asli.</p>
+      <div id="lg-result"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ PENGATURAN ============================ -->
+<section class="page" id="page-settings">
+  <div class="page-head"><div><h2>Pengaturan &amp; Backup</h2>
+    <p>Nilai bawaan di bawah hanyalah contoh. Sesuaikan dengan ketentuan kredit SME yang berlaku di unit Anda.</p></div></div>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Parameter kalkulator kelayakan</h3>
+      <div class="grid g2">
+        <label class="f">DSCR minimum<input id="st-dscr" type="number" step="0.05"></label>
+        <label class="f">Porsi pembiayaan bank untuk KMK (%)<input id="st-porsi" type="number"></label>
+        <label class="f">Pembulatan plafon ke bawah (Rp)<input id="st-round" inputmode="numeric" data-money></label>
+        <label class="f">Suku bunga bawaan (% p.a.)<input id="st-bunga" type="number" step="0.01"></label>
+      </div>
+      <h4 style="margin-top:14px">Rasio LTV maksimum per jenis agunan (%)</h4>
+      <div id="st-ltv" class="grid g2"></div>
+      <div class="row end" style="margin-top:12px"><button class="btn secondary sm" id="st-reset-params">Kembalikan bawaan</button><button class="btn sm" id="st-save-params">Simpan parameter</button></div>
+    </div>
+    <div class="card">
+      <h3>Kata kunci rekening koran</h3>
+      <label class="f">Kata kunci "perlu cek" contra (pindah buku, overbooking, dll.)<span class="hint">Satu per baris. Transaksi dengan kata ini ditandai untuk direviu, tidak otomatis dibuang.</span>
+        <textarea id="st-kw-contra" rows="4"></textarea></label>
+      <label class="f" style="margin-top:8px">Kata kunci kredit bukan omzet: bunga/jasa giro<textarea id="st-kw-bunga" rows="2"></textarea></label>
+      <label class="f" style="margin-top:8px">Kata kunci kredit bukan omzet: pencairan pinjaman<textarea id="st-kw-cair" rows="2"></textarea></label>
+      <label class="f" style="margin-top:8px">Kata kunci kredit bukan omzet: koreksi/reversal<textarea id="st-kw-koreksi" rows="2"></textarea></label>
+      <div class="row end" style="margin-top:12px"><button class="btn secondary sm" id="st-reset-kw">Kembalikan bawaan</button><button class="btn sm" id="st-save-kw">Simpan kata kunci</button></div>
+    </div>
+    <div class="card">
+      <h3>Backup &amp; data</h3>
+      <p class="text-2">Data (daftar pengingat, profil debitur, templat sendiri, pengaturan) tersimpan di browser laptop ini. Lakukan backup berkala ke folder kerja Anda.</p>
+      <div class="row">
+        <button class="btn" id="st-backup">Ekspor backup (.json)</button>
+        <button class="btn secondary" id="st-restore">Pulihkan dari backup</button>
+        <input type="file" id="st-restore-file" accept=".json" class="hidden">
+        <button class="btn danger" id="st-wipe">Hapus semua data</button>
+      </div>
+      <p class="small muted" id="st-usage" style="margin-top:10px"></p>
+    </div>
+    <div class="card">
+      <h3>Uji isolasi jaringan</h3>
+      <p class="text-2">Tombol ini mencoba mengirim permintaan ke internet. Jika aplikasi aman, permintaan akan <strong>diblokir</strong> oleh browser sebelum keluar dari laptop.</p>
+      <button class="btn secondary" id="st-nettest">Jalankan uji</button>
+      <div id="st-nettest-result" style="margin-top:10px"></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div id="toast"></div>
+
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/pdf.worker.min.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/pizzip.min.js"></script>
+<script src="vendor/docxtemplater.min.js"></script>
+<script src="vendor/tesseract.min.js"></script>
+<script src="js/core.js"></script>
+<script src="js/textsource.js"></script>
+<script src="js/statement-parser.js"></script>
+<script src="js/statement.js"></script>
+<script src="js/reminder.js"></script>
+<script src="js/templates-data.js"></script>
+<script src="js/docgen.js"></script>
+<script src="js/calculator.js"></script>
+<script src="js/legal-parser.js"></script>
+<script src="js/legal.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
